@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SG&amp;A Summary Dashboard — Aug 2026</title>
+<script>
+/*__CHARTJS__*/
+</script>
+<style>
+  :root{
+    --navy:#102A43; --navy-2:#1B3A5C; --bg:#EEF1F5; --card:#FFFFFF; --border:#DCE2E9;
+    --text:#16202A; --muted:#64748B; --gold:#B8842E; --disc:#B4533C; --nondisc:#2F5D62;
+    --pos:#2E7D46; --neg:#B4302A; --radius:6px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:"Segoe UI",Inter,-apple-system,BlinkMacSystemFont,Roboto,Arial,sans-serif;font-size:13px;-webkit-font-smoothing:antialiased;}
+  .app{max-width:1720px;margin:0 auto;padding:16px 20px 40px;}
+
+  header.top{background:linear-gradient(90deg,var(--navy) 0%,var(--navy-2) 100%);color:#fff;border-radius:var(--radius);padding:14px 22px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap;}
+  header.top h1{font-size:18px;margin:0;font-weight:600;letter-spacing:.2px;}
+  header.top .sub{font-size:11.5px;color:#B9C6D6;margin-top:3px;}
+  header.top .period{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:4px;padding:6px 14px;font-size:12px;font-weight:600;}
+
+  #tab-bar{display:flex;gap:18px;margin-bottom:14px;}
+  .tab-btn{background:transparent;border:none;border-bottom:3px solid transparent;color:var(--muted);font-size:13px;font-weight:600;padding:8px 4px;cursor:pointer;font-family:inherit;}
+  .tab-btn.active{color:var(--navy);border-bottom-color:var(--gold);}
+
+  .panel{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);display:flex;flex-direction:column;overflow:hidden;min-width:0;}
+  .phead{background:var(--navy);color:#fff;padding:9px 14px;font-size:12.5px;font-weight:600;letter-spacing:.2px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex:0 0 auto;}
+  .phead .tag{font-size:10px;font-weight:500;background:rgba(255,255,255,.15);padding:2px 7px;border-radius:3px;text-align:right;}
+  .pbody{flex:1 1 auto;min-height:0;padding:10px 14px 14px;overflow:auto;}
+  .pbody.nopad{padding:0;}
+  .chart-wrap{position:relative;flex:1;min-height:0;}
+  .legend-row{display:flex;gap:14px;font-size:10.5px;color:var(--muted);padding:8px 14px 0;flex-wrap:wrap;}
+  .legend-dot{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:middle;}
+  .neg{color:var(--neg);} .pos{color:var(--pos);}
+  .link{color:var(--navy-2);font-weight:600;cursor:pointer;text-decoration:none;}
+  .link:hover{text-decoration:underline;}
+
+  /* KPI tiles */
+  .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;margin-bottom:14px;}
+  .kpi{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--gold);border-radius:var(--radius);padding:12px 16px;cursor:pointer;transition:box-shadow .15s,transform .15s;}
+  .kpi.static{cursor:default;}
+  .kpi:not(.static):hover{box-shadow:0 3px 10px rgba(16,42,67,.12);transform:translateY(-1px);}
+  .kpi.current{border-left-color:var(--navy);background:#F7FAFD;}
+  .kpi .k-label{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.3px;}
+  .kpi .k-value{font-size:28px;font-weight:700;color:var(--navy);line-height:1.15;margin-top:3px;}
+  .kpi .k-delta{font-size:11.5px;font-weight:600;margin-top:2px;}
+  .kpi .k-sub{font-size:10.5px;color:var(--muted);margin-top:2px;}
+  .kpi .k-go{font-size:10px;color:var(--gold);font-weight:600;margin-top:6px;}
+
+  /* Summary grid */
+  .sgrid{display:grid;grid-template-columns:1.5fr 1fr 1fr;grid-template-rows:340px 340px;gap:14px;}
+  .insights{margin:0;padding:0;list-style:none;font-size:12px;line-height:1.55;}
+  .insights li{padding:7px 0 7px 12px;border-left:3px solid var(--gold);margin-bottom:8px;background:#FAFBFC;}
+  .insights li b{color:var(--navy);}
+
+  /* Tables */
+  table.dt{border-collapse:collapse;width:100%;font-size:11.5px;}
+  table.dt thead th{position:sticky;top:0;background:#F3F5F8;border-bottom:1px solid var(--border);color:var(--navy);font-weight:600;padding:6px 8px;text-align:right;white-space:nowrap;z-index:1;}
+  table.dt thead th:first-child{text-align:left;}
+  table.dt tbody td{padding:5px 8px;text-align:right;border-bottom:1px solid #EEF1F5;white-space:nowrap;font-variant-numeric:tabular-nums;}
+  table.dt tbody td:first-child{text-align:left;font-weight:500;white-space:normal;}
+  table.dt tbody tr.click{cursor:pointer;}
+  table.dt tbody tr.click:hover{background:#F7FAFD;}
+  table.dt tbody tr.active-row{background:#FFF3DE;}
+  table.dt td.total-col{font-weight:700;color:var(--navy);}
+  tr.total-row{background:#F3F5F8;font-weight:700;}
+  .mix-bar{display:flex;width:100%;height:14px;border-radius:2px;overflow:hidden;}
+  .mix-bar div{height:100%;}
+
+  /* Detail view */
+  #crumb{display:flex;align-items:center;gap:10px;background:#FFF6E9;border:1px solid #EBD1A0;color:#7A5410;border-radius:var(--radius);padding:8px 16px;font-size:12.5px;margin-bottom:14px;flex-wrap:wrap;}
+  #crumb b{color:#5C3E0B;}
+  .btn{background:var(--navy);color:#fff;border:none;border-radius:4px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit;font-weight:600;}
+  .btn:hover{background:var(--navy-2);}
+  .btn.ghost{background:#F3F5F8;color:var(--muted);border:1px solid var(--border);}
+  .btn.ghost.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+  #crumb .btn:first-child{margin-left:0;}
+  .dlayout{display:grid;grid-template-columns:340px 1fr;gap:14px;align-items:start;}
+  #picker-panel{height:calc(100vh - 230px);min-height:520px;position:sticky;top:12px;}
+  .picker-tools{padding:8px 12px;border-bottom:1px solid var(--border);display:flex;gap:6px;flex-wrap:wrap;}
+  .picker-tools input{flex:1 1 100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:12px;font-family:inherit;}
+  .dright{display:flex;flex-direction:column;gap:14px;min-width:0;}
+  .tile-row{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;}
+  .dgrid{display:grid;grid-template-columns:1.4fr 1fr;grid-auto-rows:320px;gap:14px;}
+  .note{font-size:10.5px;color:var(--muted);padding:8px 14px;border-top:1px solid var(--border);}
+  .empty{color:var(--muted);font-size:12px;padding:30px 14px;text-align:center;}
+  .foot{margin-top:18px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px 20px;font-size:11px;color:var(--muted);line-height:1.6;}
+  .foot b{color:var(--text);}
+  ::-webkit-scrollbar{width:9px;height:9px;} ::-webkit-scrollbar-thumb{background:#C6CFDA;border-radius:5px;} ::-webkit-scrollbar-track{background:transparent;}
+
+  @media (max-width:1200px){
+    .kpi-row,.tile-row{grid-template-columns:repeat(2,1fr);}
+    .sgrid{grid-template-columns:1fr;grid-template-rows:none;grid-auto-rows:340px;}
+    .dlayout{grid-template-columns:1fr;} #picker-panel{position:static;height:360px;min-height:0;}
+    .dgrid{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div>
+      <h1>SG&amp;A Summary Dashboard</h1>
+      <div class="sub">Bill Gosling Outsourcing · 39 corporate SG&amp;A cost centres · data through Aug 2026</div>
+    </div>
+    <div class="period">Reporting Month: Aug 2026</div>
+  </header>
+
+  <div id="tab-bar">
+    <button class="tab-btn active" data-view="summary">Summary</button>
+    <button class="tab-btn" data-view="detail">Linked Drill-Down</button>
+  </div>
+
+  <!-- ===================== SUMMARY ===================== -->
+  <div id="view-summary">
+    <div class="kpi-row" id="kpi-row"></div>
+
+    <div class="sgrid">
+      <div class="panel">
+        <div class="phead">SG&amp;A as % of Revenue — Monthly Trend<span class="tag">click for detail</span></div>
+        <div class="pbody chart-wrap"><canvas id="c-trend"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="phead">Top 8 Cost Centres<span class="tag">YTD Jan–Aug 2026 · click a bar</span></div>
+        <div class="pbody chart-wrap"><canvas id="c-cc"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="phead">Discretionary vs Non-Discretionary<span class="tag">YTD 2026</span></div>
+        <div class="pbody chart-wrap" style="display:flex;flex-direction:column;">
+          <div class="chart-wrap"><canvas id="c-disc"></canvas></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="phead">Top 8 Spend Categories<span class="tag">YTD Jan–Aug 2026 · click a bar</span></div>
+        <div class="pbody chart-wrap"><canvas id="c-spend"></canvas></div>
+      </div>
+      <div class="panel">
+        <div class="phead">Cost Centre Movers<span class="tag">Aug vs Jul · click a row</span></div>
+        <div class="pbody nopad"><table class="dt"><thead><tr><th>Cost Centre</th><th>MoM $</th></tr></thead><tbody id="movers"></tbody></table></div>
+      </div>
+      <div class="panel">
+        <div class="phead">Key Takeaways<span class="tag">auto-generated</span></div>
+        <div class="pbody"><ul class="insights" id="insights"></ul></div>
+      </div>
+    </div>
+    <div style="margin-top:14px;text-align:right;"><a class="link" data-go="#detail">Open the full linked drill-down →</a></div>
+  </div>
+
+  <!-- ===================== DETAIL ===================== -->
+  <div id="view-detail" style="display:none;">
+    <div id="crumb">
+      <button class="btn" data-go="#summary">← Summary</button>
+      <span>Viewing: <b id="crumb-label"></b></span>
+    </div>
+    <div class="dlayout">
+      <div class="panel" id="picker-panel">
+        <div class="phead"><span>Select a line</span><span class="tag">linked to Summary</span></div>
+        <div class="picker-tools">
+          <button class="btn ghost" id="ent-cc">Cost Centres</button>
+          <button class="btn ghost" id="ent-sp">Spend Categories</button>
+          <input id="picker-search" type="search" placeholder="Filter…">
+        </div>
+        <div class="pbody nopad" style="overflow:auto;">
+          <table class="dt"><thead><tr><th>Name</th><th>YTD26 $</th><th>% Rev</th></tr></thead><tbody id="picker-body"></tbody></table>
+        </div>
+      </div>
+      <div class="dright">
+        <div class="tile-row" id="d-tiles"></div>
+        <div class="dgrid">
+          <div class="panel"><div class="phead"><span id="d1-title">Monthly Cost</span><span class="tag" id="d1-tag"></span></div><div class="pbody chart-wrap" id="d1-body"><canvas id="d-c1"></canvas></div></div>
+          <div class="panel"><div class="phead"><span id="d2-title">% of Cost &amp; % of Revenue</span><span class="tag">FY24 · FY25 · YTD26</span></div><div class="pbody chart-wrap" id="d2-body"><canvas id="d-c2"></canvas></div></div>
+          <div class="panel"><div class="phead"><span id="d3-title"></span><span class="tag" id="d3-tag"></span></div><div class="pbody chart-wrap" id="d3-body"><canvas id="d-c3"></canvas></div></div>
+          <div class="panel"><div class="phead"><span id="d4-title"></span><span class="tag" id="d4-tag"></span></div><div class="pbody chart-wrap" id="d4-body"><canvas id="d-c4"></canvas></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <b>Notes.</b> SG&amp;A = every line in the source “SG&amp;A OH Only” ledger across 39 corporate cost centres. Revenue is total company revenue. Trend charts exclude the Aug-2024 one-time reclassification. Discretionary / Non-Discretionary and Spend Category are the company’s own classifications. Cost per FTE uses the Headcount &amp; FTE tracker. Source: SGA Cost Analysis – Aug 2026 workbook (V2.0).
+  </div>
+</div>
+
+<script>
+const DATA = /*__DATA__*/;
+
+/* ---------- helpers ---------- */
+const fmtM = v => { const a=Math.abs(v); const s=a>=1e6?(a/1e6).toFixed(2)+'M':a>=1e3?(a/1e3).toFixed(0)+'K':a.toFixed(0); return (v<0?'-$':'$')+s; };
+const fmt0 = v => '$'+Math.round(v).toLocaleString('en-US');
+const pct1 = v => (v*100).toFixed(1)+'%';
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const monthShort = m => { const [y,mo]=m.split('-'); return MON[+mo-1]+'-'+y.slice(2); };
+const clamp0 = v => Math.max(v,0);
+const ANOMALY = '2024-08';
+const M = DATA.months, N = M.length, CUR = N-1, PREV = N-2;
+const keep = M.map(m=>m!==ANOMALY);
+const trim = a => a.filter((_,i)=>keep[i]);
+const LABELS = trim(M).map(monthShort);
+const sum = (a, idxs) => idxs.reduce((s,i)=>s+(a[i]||0),0);
+const YTD = M.map((m,i)=>m.startsWith('2026-')?i:-1).filter(i=>i>=0);
+const YTD_PY = YTD.map(i=>M.indexOf('2025-'+M[i].slice(5))).filter(i=>i>=0);
+function shortCC(name){
+  return name.replace(/^\d+\s*/,'').replace(/\s+/g,' ').replace(/\w\S*/g,w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase())
+    .replace(/\bIt\b/g,'IT').replace(/\bBms\b/g,'BMS').replace(/\bMtcu\b/g,'MTCU').replace(/\bNeqqo\b/g,'NEQQO')
+    .replace(/\bRpa\b/g,'RPA').replace(/\bAi\b/g,'AI').replace(/\bCsqa\b/g,'CSQA').replace(/\bWfm\b/g,'WFM').replace(/\bCoe\b/g,'COE').replace(/\bIdel\b/g,'IDEL');
+}
+const trunc = (s,n)=> s.length>n ? s.slice(0,n-1)+'…' : s;
+const P = DATA.kpi_periods;
+const SUMTOT = { ytd: sum(DATA.total_cost_by_month, YTD) };
+
+const charts = {};
+function mk(id, cfg){
+  if(charts[id]) charts[id].destroy();
+  charts[id] = new Chart(document.getElementById(id), cfg);
+  return charts[id];
+}
+Chart.defaults.font.family = "Segoe UI, Inter, Arial, sans-serif";
+Chart.defaults.color = '#64748B';
+const go = h => { location.hash = h; };
+const enc = s => encodeURIComponent(s);
+
+/* ---------- lookups ---------- */
+const CC = DATA.cc_table;                 // fy/ytd amounts & pct
+const SP = DATA.spend_table;
+const ccByName = Object.fromEntries(CC.map(r=>[r.name,r]));
+const spByName = Object.fromEntries(SP.map(r=>[r.name,r]));
+const discByCC = Object.fromEntries(DATA.disc_by_cc.map(r=>[r.name,r]));
+const ohByCC = Object.fromEntries(DATA.oh_per_fte_aug26.map(r=>[r.name,r.value]));
+const top10 = Object.fromEntries(DATA.top10_spend_split.map(r=>[r.name,r]));
+
+/* ============================================================
+   SUMMARY VIEW
+   ============================================================ */
+function renderSummary(){
+  const cost = DATA.total_cost_by_month, rev = DATA.total_revenue_by_month, pctm = DATA.pct_by_month;
+  const momCost = cost[CUR]/cost[PREV]-1, momPts = pctm[CUR]-pctm[PREV];
+  const ytdCost = sum(cost,YTD), ytdCostPY = sum(cost,YTD_PY), ytdRev = sum(rev,YTD), ytdRevPY = sum(rev,YTD_PY);
+  const yoyCost = ytdCost/ytdCostPY-1, yoyPts = ytdCost/ytdRev - ytdCostPY/ytdRevPY;
+  const fte = DATA.total_fte_by_month, cpf = DATA.cost_per_fte_trend;
+  const cls = (v)=> v<=0 ? 'pos' : 'neg';     // cost/ratio going down = good
+  const arrow = v => v>=0?'▲':'▼';
+
+  const tiles = [
+    {cur:true, label:'SG&A — Aug 2026', value:fmtM(cost[CUR]), delta:`<span class="${cls(momCost)}">${arrow(momCost)} ${Math.abs(momCost*100).toFixed(1)}% vs Jul</span>`, sub:`Revenue ${fmtM(rev[CUR])}`, to:'#detail'},
+    {label:'% of Revenue — Aug', value:pct1(pctm[CUR]), delta:`<span class="${cls(momPts)}">${arrow(momPts)} ${Math.abs(momPts*100).toFixed(1)} pts vs Jul</span>`, sub:`Jul: ${pct1(pctm[PREV])}`, to:'#detail'},
+    {label:'% of Revenue — YTD 2026', value:pct1(ytdCost/ytdRev), delta:`<span class="${cls(yoyPts)}">${arrow(yoyPts)} ${Math.abs(yoyPts*100).toFixed(1)} pts vs YTD 2025</span>`, sub:`FY25: ${pct1(P.FY2025.pct)} · FY24: ${pct1(P.FY2024.pct)}`, to:'#detail'},
+    {label:'SG&A — YTD 2026', value:fmtM(ytdCost), delta:`<span class="${cls(yoyCost)}">${arrow(yoyCost)} ${Math.abs(yoyCost*100).toFixed(1)}% YoY</span>`, sub:`YTD 2025: ${fmtM(ytdCostPY)}`, to:'#detail'},
+    {static:true, label:'Company FTE — Aug 2026', value:Math.round(fte[CUR]).toLocaleString('en-US'), delta:`<span class="${cls(cpf[CUR]-cpf[PREV])}">${fmtM(cpf[CUR])} SG&A per FTE</span>`, sub:`Jul: ${Math.round(fte[PREV]).toLocaleString('en-US')} FTE · ${fmtM(cpf[PREV])}/FTE`},
+  ];
+  document.getElementById('kpi-row').innerHTML = tiles.map(t=>`<div class="kpi${t.cur?' current':''}${t.static?' static':''}" ${t.to?`data-go="${t.to}"`:''}>
+      <div class="k-label">${t.label}</div><div class="k-value">${t.value}</div>
+      <div class="k-delta">${t.delta}</div><div class="k-sub">${t.sub}</div>${t.to?'<div class="k-go">View detail →</div>':''}</div>`).join('');
+
+  // trend
+  const pctTrim = trim(pctm);
+  mk('c-trend',{type:'line',
+    data:{labels:LABELS,datasets:[
+      {label:'% of Revenue',data:pctTrim,borderColor:'#B8842E',backgroundColor:'rgba(184,132,46,.12)',fill:true,tension:.25,pointRadius:2.5,pointBackgroundColor:'#B8842E',borderWidth:2},
+      {label:'FY25 average',data:pctTrim.map(()=>P.FY2025.pct),borderColor:'#1B3A5C',borderDash:[5,4],pointRadius:0,borderWidth:1.2,fill:false}]},
+    options:{responsive:true,maintainAspectRatio:false,onClick:()=>go('#detail'),
+      plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:10}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+pct1(c.raw)}}},
+      scales:{x:{ticks:{maxRotation:0,autoSkip:true,maxTicksLimit:10,font:{size:9}},grid:{display:false}},y:{ticks:{callback:v=>(v*100).toFixed(0)+'%',font:{size:9}},grid:{color:'#F0F2F5'}}}}});
+
+  // top CCs
+  const topCC = [...CC].sort((a,b)=>b.ytd2026_amt-a.ytd2026_amt).slice(0,8);
+  mk('c-cc',{type:'bar',
+    data:{labels:topCC.map(r=>trunc(shortCC(r.name),24)),datasets:[{data:topCC.map(r=>r.ytd2026_amt),backgroundColor:'#1B3A5C'}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      onClick:(e,els)=>{ if(els.length) go('#detail/cc/'+enc(topCC[els[0].index].name)); },
+      onHover:(e,els)=>{ e.native.target.style.cursor = els.length?'pointer':'default'; },
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtM(c.raw)+' · '+pct1(topCC[c.dataIndex].ytd2026_pct_cost)+' of SG&A'}}},
+      scales:{x:{ticks:{callback:v=>fmtM(v),font:{size:9}}},y:{ticks:{font:{size:10}}}}}});
+
+  // disc doughnut
+  const tt = DATA.type_totals_by_month, D = sum(tt['Discretionary'],YTD), ND = sum(tt['Non-Discretionary'],YTD);
+  mk('c-disc',{type:'doughnut',
+    data:{labels:['Non-discretionary','Discretionary'],datasets:[{data:[ND,D],backgroundColor:['#2F5D62','#B4533C'],borderWidth:2,borderColor:'#fff'}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'62%',
+      plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10.5}}},tooltip:{callbacks:{label:c=>c.label+': '+fmtM(c.raw)+' ('+pct1(c.raw/(D+ND))+')'}}}}});
+
+  // top spend categories (exclude 'Other' bucket from ranking)
+  const topSP = SP.filter(r=>r.name!=='Other').sort((a,b)=>b.ytd2026_amt-a.ytd2026_amt).slice(0,8);
+  mk('c-spend',{type:'bar',
+    data:{labels:topSP.map(r=>trunc(r.name.replace(' (untagged)',''),30)),datasets:[{data:topSP.map(r=>r.ytd2026_amt),backgroundColor:'#B8842E'}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,
+      onClick:(e,els)=>{ if(els.length) go('#detail/sp/'+enc(topSP[els[0].index].name)); },
+      onHover:(e,els)=>{ e.native.target.style.cursor = els.length?'pointer':'default'; },
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtM(c.raw)+' · '+pct1(topSP[c.dataIndex].ytd2026_pct_cost)+' of SG&A'}}},
+      scales:{x:{ticks:{callback:v=>fmtM(v),font:{size:9}}},y:{ticks:{font:{size:10}}}}}});
+
+  // movers
+  const mv = Object.entries(DATA.cost_centers_monthly).map(([name,m])=>({name,chg:m[CUR]-m[PREV]})).sort((a,b)=>b.chg-a.chg);
+  const rows = [...mv.slice(0,5), ...mv.slice(-5).reverse()];
+  document.getElementById('movers').innerHTML = rows.map(r=>`<tr class="click" data-go="#detail/cc/${enc(r.name)}"><td>${shortCC(r.name)}</td><td class="total-col ${r.chg>0?'neg':'pos'}">${r.chg>0?'+':'-'}${fmtM(Math.abs(r.chg))}</td></tr>`).join('');
+
+  // insights
+  const topC = [...CC].sort((a,b)=>b.ytd2026_amt-a.ytd2026_amt)[0];
+  const salShare = spByName['Salaries & Core Payroll (untagged)'].ytd2026_pct_cost;
+  const b1 = mv[0], b2 = mv[mv.length-1];
+  const li = [
+    `SG&amp;A ran at <b>${pct1(pctm[CUR])}</b> of revenue in Aug — ${momPts<=0?'down':'up'} ${Math.abs(momPts*100).toFixed(1)} pts on July; YTD is <b>${pct1(ytdCost/ytdRev)}</b>, ${yoyPts>0?'up':'down'} ${Math.abs(yoyPts*100).toFixed(1)} pts on the same period last year.`,
+    `YTD spend of <b>${fmtM(ytdCost)}</b> is ${yoyCost>=0?'up':'down'} ${Math.abs(yoyCost*100).toFixed(1)}% YoY while revenue is ${ytdRev>=ytdRevPY?'up':'down'} ${Math.abs((ytdRev/ytdRevPY-1)*100).toFixed(1)}%.`,
+    `<b>${shortCC(topC.name)}</b> is the largest cost centre at ${pct1(topC.ytd2026_pct_cost)} of YTD SG&amp;A; core payroll makes up ${pct1(salShare)}.`,
+    `Discretionary spend is <b>${pct1(D/(D+ND))}</b> of YTD SG&amp;A — the bulk of the base is non-discretionary.`,
+    `Biggest MoM moves: <b>${shortCC(b1.name)}</b> ${b1.chg>=0?'+':'-'}${fmtM(Math.abs(b1.chg))} and <b>${shortCC(b2.name)}</b> ${b2.chg>=0?'+':'-'}${fmtM(Math.abs(b2.chg))}.`,
+  ];
+  document.getElementById('insights').innerHTML = li.map(t=>`<li>${t}</li>`).join('');
+}
+
+/* ============================================================
+   DETAIL VIEW (linked drill-down)
+   sel = {ent:'cc'|'sp', name:string|null}   name null => company total
+   ============================================================ */
+let sel = {ent:'cc', name:null};
+
+function renderPicker(){
+  const q = document.getElementById('picker-search').value.trim().toLowerCase();
+  const list = sel.ent==='cc' ? [...CC] : [...SP];
+  list.sort((a,b)=>b.ytd2026_amt-a.ytd2026_amt);
+  let html = `<tr class="click total-row${sel.name===null?' active-row':''}" data-go="#detail/${sel.ent}"><td>TOTAL — Company SG&amp;A</td><td class="total-col">${fmt0(SUMTOT.ytd)}</td><td>${pct1(P.YTD2026.pct)}</td></tr>`;
+  html += list.filter(r=>!q||r.name.toLowerCase().includes(q)||shortCC(r.name).toLowerCase().includes(q)).map(r=>
+    `<tr class="click${sel.name===r.name?' active-row':''}" data-go="#detail/${sel.ent}/${enc(r.name)}"><td>${sel.ent==='cc'?shortCC(r.name):r.name}</td><td class="total-col">${fmt0(r.ytd2026_amt)}</td><td>${pct1(r.ytd2026_pct_rev)}</td></tr>`).join('');
+  document.getElementById('picker-body').innerHTML = html;
+  document.getElementById('ent-cc').classList.toggle('active', sel.ent==='cc');
+  document.getElementById('ent-sp').classList.toggle('active', sel.ent==='sp');
+  const act = document.querySelector('#picker-body tr.active-row');
+  if(act && sel.name) act.scrollIntoView({block:'nearest'});
+}
+
+const tile = (label,value,sub,cur) => `<div class="kpi static${cur?' current':''}"><div class="k-label">${label}</div><div class="k-value" style="font-size:24px">${value}</div><div class="k-sub">${sub||'&nbsp;'}</div></div>`;
+
+function setPanel(n, title, tag){ document.getElementById(`d${n}-title`).textContent = title; const t=document.getElementById(`d${n}-tag`); if(t) t.textContent = tag||''; }
+function emptyPanel(n, msg){
+  const body = document.getElementById(`d${n}-body`);
+  if(charts[`d-c${n}`]){ charts[`d-c${n}`].destroy(); delete charts[`d-c${n}`]; }
+  body.innerHTML = `<div class="empty">${msg}</div>`;
+}
+function ensureCanvas(n){
+  const body = document.getElementById(`d${n}-body`);
+  if(!body.querySelector('canvas')) body.innerHTML = `<canvas id="d-c${n}"></canvas>`;
+}
+
+const lineOpts = (fmt) => ({responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmt(c.raw)}}},
+  scales:{y:{ticks:{callback:v=>fmt(v),font:{size:9}},grid:{color:'#EEF1F5'}},x:{ticks:{maxTicksLimit:10,font:{size:9}},grid:{display:false}}}});
+
+function renderDetail(){
+  const {ent,name} = sel;
+  const isTotal = name===null;
+  const label = isTotal ? 'Company total — all SG&A' : (ent==='cc' ? 'Cost Centre — '+shortCC(name) : 'Spend Category — '+name);
+  document.getElementById('crumb-label').textContent = label;
+  renderPicker();
+
+  // series
+  let monthly = null;
+  if(isTotal) monthly = DATA.total_cost_by_month;
+  else if(ent==='cc') monthly = DATA.cost_centers_monthly[name];
+  else monthly = DATA.spend_monthly[name] || null;
+  const row = isTotal ? null : (ent==='cc' ? ccByName[name] : spByName[name]);
+
+  const ytd = row ? row.ytd2026_amt : SUMTOT.ytd;
+  const share = ytd/SUMTOT.ytd;
+  const ytdPY = monthly ? sum(monthly,YTD_PY) : null;
+  const yoy = ytdPY ? ytd/ytdPY-1 : null;
+  const ytdRevPct = ytd/P.YTD2026.revenue;
+  const augAmt = monthly ? monthly[CUR] : null;
+  const momChg = monthly && monthly[PREV] ? monthly[CUR]/monthly[PREV]-1 : null;
+  const fteSeries = isTotal ? DATA.total_fte_by_month : (ent==='cc' ? DATA.fte_by_cc[name] : null);
+  const fteNow = fteSeries ? fteSeries[CUR] : null;
+  const d = c => c==null ? '' : `<span class="${c<=0?'pos':'neg'}">${c>=0?'▲':'▼'} ${Math.abs(c*100).toFixed(1)}%</span>`;
+
+  document.getElementById('d-tiles').innerHTML = [
+    tile('YTD 2026 spend', fmtM(ytd), isTotal?'':pct1(share)+' of total SG&A', true),
+    tile('% of revenue (YTD)', pct1(ytdRevPct), 'FY25: '+pct1(isTotal?P.FY2025.pct:row.fy2025_pct_rev)),
+    tile('Aug 2026', augAmt!=null?fmtM(augAmt):'n/a', momChg!=null?d(momChg)+' vs Jul':'trend not available'),
+    tile('YTD vs prior year', yoy!=null?(yoy>=0?'+':'')+(yoy*100).toFixed(1)+'%':'n/a', ytdPY!=null?'YTD 2025: '+fmtM(ytdPY):''),
+    tile(ent==='cc'||isTotal?'FTE (Aug 2026)':'Share of SG&A', ent==='cc'||isTotal ? (fteNow!=null?Math.round(fteNow).toLocaleString('en-US'):'n/a') : pct1(share),
+         ent==='cc'||isTotal ? (fteNow>0 ? fmtM(augAmt/fteNow)+' cost per FTE' : 'no FTE recorded') : 'of YTD SG&A'),
+  ].join('');
+
+  /* Panel 1 — monthly cost trend */
+  setPanel(1, 'Monthly Cost Trend', isTotal?'Company SG&A':'');
+  ensureCanvas(1);
+  if(monthly){
+    mk('d-c1',{type:'bar',data:{labels:LABELS,datasets:[{data:trim(monthly).map(clamp0),backgroundColor:trim(M).map(m=>m.startsWith('2026-')?'#B8842E':'#1B3A5C')}]},
+      options:lineOpts(fmtM)});
+    document.getElementById('d1-tag').textContent = 'gold = 2026';
+  } else emptyPanel(1,'Monthly trend is not tracked for the “Other” bucket.');
+
+  /* Panel 2 — % of cost & % of revenue by period */
+  ensureCanvas(2);
+  const src = isTotal ? null : row;
+  const pc = src ? [src.fy2024_pct_cost,src.fy2025_pct_cost,src.ytd2026_pct_cost] : [1,1,1];
+  const pr = src ? [src.fy2024_pct_rev,src.fy2025_pct_rev,src.ytd2026_pct_rev] : [P.FY2024.pct,P.FY2025.pct,P.YTD2026.pct];
+  mk('d-c2',{type:'bar',data:{labels:['FY 2024','FY 2025','YTD 2026'],datasets:[
+      {label:'% of SG&A cost',data:pc,backgroundColor:'#1B3A5C',yAxisID:'y'},
+      {label:'% of revenue',data:pr,backgroundColor:'#B8842E',yAxisID:'y1'}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:true,position:'bottom',labels:{boxWidth:10,font:{size:10}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+pct1(c.raw)}}},
+      scales:{y:{position:'left',ticks:{callback:v=>(v*100).toFixed(0)+'%',font:{size:9}},grid:{color:'#EEF1F5'},title:{display:true,text:'% of cost',font:{size:9}}},
+              y1:{position:'right',ticks:{callback:v=>(v*100).toFixed(1)+'%',font:{size:9}},grid:{display:false},title:{display:true,text:'% of revenue',font:{size:9}}}}}});
+
+  /* Panels 3 & 4 depend on entity */
+  if(isTotal || ent==='cc'){
+    // Panel 3: cost per FTE trend
+    setPanel(3, isTotal?'SG&A Cost per FTE — Trended':'Cost per Own FTE — Trended', isTotal?'company-wide':'cost ÷ this cost centre’s FTE');
+    let series;
+    if(isTotal) series = trim(DATA.cost_per_fte_trend);
+    else { const f = DATA.fte_by_cc[name]||[]; series = trim(monthly.map((c,i)=> f[i]>0 ? c/f[i] : null)); }
+    if(series.some(v=>v!=null)){ ensureCanvas(3);
+      mk('d-c3',{type:'line',data:{labels:LABELS,datasets:[{data:series,borderColor:'#1B3A5C',backgroundColor:'rgba(27,58,92,.1)',fill:true,tension:.25,pointRadius:2,borderWidth:2}]},options:lineOpts(fmtM)});
+    } else emptyPanel(3,'No FTE recorded for this cost centre.');
+
+    // Panel 4: disc split / spend mix
+    if(isTotal){
+      const tt = DATA.type_totals_by_month;
+      setPanel(4,'Discretionary vs Non-Discretionary','monthly, % of SG&A');
+      ensureCanvas(4);
+      const dp = trim(tt['Discretionary'].map((v,i)=>v/(v+tt['Non-Discretionary'][i])));
+      mk('d-c4',{type:'line',data:{labels:LABELS,datasets:[{data:dp,borderColor:'#B4533C',backgroundColor:'rgba(180,83,60,.12)',fill:true,tension:.25,pointRadius:2,borderWidth:2}]},options:lineOpts(pct1)});
+    } else if(top10[name] && DATA.cc_items[name]){
+      setPanel(4,'Top Spend Items — YTD 2026','from workbook “Spend Cat by CC”');
+      const items = DATA.cc_items[name];
+      const its = items.map(it=>({name:it.name,ytd:sum(it.monthly,YTD)})).sort((a,b)=>(a.name==='All other items')-(b.name==='All other items') || b.ytd-a.ytd);
+      ensureCanvas(4);
+      mk('d-c4',{type:'bar',data:{labels:its.map(i=>trunc(i.name,28)),datasets:[{data:its.map(i=>i.ytd),backgroundColor:its.map(i=>i.name==='All other items'?'#D8DEE5':'#2E5077')}]},
+        options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>fmtM(c.raw)+' · '+pct1(c.raw/its.reduce((s,x)=>s+x.ytd,0))}}},scales:{x:{ticks:{callback:v=>fmtM(v),font:{size:9}}},y:{ticks:{font:{size:9.5}}}}}});
+    } else {
+      const dc = discByCC[name];
+      setPanel(4,'Discretionary vs Non-Discretionary','YTD 2026');
+      if(dc){ ensureCanvas(4);
+        mk('d-c4',{type:'doughnut',data:{labels:['Non-discretionary','Discretionary'],datasets:[{data:[clamp0(dc.non_discretionary),clamp0(dc.discretionary)],backgroundColor:['#2F5D62','#B4533C'],borderWidth:2,borderColor:'#fff'}]},
+          options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom',labels:{boxWidth:10,font:{size:10.5}}},tooltip:{callbacks:{label:c=>c.label+': '+fmtM(c.raw)}}}}});
+      } else emptyPanel(4,'No discretionary split available.');
+    }
+  } else {
+    // Spend category: share of SG&A trend + rolling cost view
+    setPanel(3,'Share of Total SG&A — Trended','% of monthly SG&A');
+    if(monthly){ ensureCanvas(3);
+      const shr = trim(monthly.map((v,i)=>v/DATA.total_cost_by_month[i]));
+      mk('d-c3',{type:'line',data:{labels:LABELS,datasets:[{data:shr,borderColor:'#1B3A5C',backgroundColor:'rgba(27,58,92,.1)',fill:true,tension:.25,pointRadius:2,borderWidth:2}]},options:lineOpts(pct1)});
+    } else emptyPanel(3,'Trend not available for the “Other” bucket.');
+    setPanel(4,'Amount by Period','FY24 · FY25 · YTD26 (8 months)');
+    ensureCanvas(4);
+    mk('d-c4',{type:'bar',data:{labels:['FY 2024','FY 2025','YTD 2026'],datasets:[{data:[row.fy2024_amt,row.fy2025_amt,row.ytd2026_amt],backgroundColor:['#1B3A5C','#1B3A5C','#B8842E']}]},options:lineOpts(fmtM)});
+  }
+}
+
+/* ============================================================
+   Router — hash links tie Summary and Drill-Down together
+   #summary | #detail | #detail/cc/<name> | #detail/sp/<name>
+   ============================================================ */
+function route(){
+  const parts = (location.hash||'#summary').replace(/^#/,'').split('/');
+  const view = parts[0]==='detail' ? 'detail' : 'summary';
+  document.getElementById('view-summary').style.display = view==='summary'?'block':'none';
+  document.getElementById('view-detail').style.display = view==='detail'?'block':'none';
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b.dataset.view===view));
+  if(view==='summary'){ renderSummary(); }
+  else {
+    const ent = parts[1]==='sp' ? 'sp' : 'cc';
+    let name = parts[2] ? decodeURIComponent(parts[2]) : null;
+    if(name && !(ent==='cc'?ccByName[name]:spByName[name])) name = null;
+    sel = {ent,name};
+    renderDetail();
+  }
+  window.scrollTo(0,0);
+}
+document.addEventListener('click', e=>{
+  const t = e.target.closest('[data-go]'); if(t){ e.preventDefault(); go(t.dataset.go); }
+});
+document.querySelectorAll('.tab-btn').forEach(b=>b.addEventListener('click',()=>go(b.dataset.view==='detail'?'#detail':'#summary')));
+document.getElementById('ent-cc').addEventListener('click',()=>go('#detail/cc'));
+document.getElementById('ent-sp').addEventListener('click',()=>go('#detail/sp'));
+document.getElementById('picker-search').addEventListener('input',renderPicker);
+window.addEventListener('hashchange',route);
+route();
+</script>
+</body>
+</html>
